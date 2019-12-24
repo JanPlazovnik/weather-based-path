@@ -2,8 +2,10 @@ const axios = require('axios');
 const conf = require('./conf.js');
 const turf = require('@turf/turf');
 
-const fetchWeatherOnCoordinate = (coords) => {
-    axios.get(`https://api.openweathermap.org/data/2.5/weather?lat=${coords.latitude}&lon=${coords.longitude}&units=metric&appid=${conf.weather_api_key})`);
+const fetchWeatherOnCoordinate = async (coords) => {
+    let response = await axios(`https://api.openweathermap.org/data/2.5/weather?lat=${coords[0]}&lon=${coords[1]}&units=metric&appid=${conf.weather_api_key}`);
+    // console.log([response.data.main.temp, response.data.weather[0].main]);
+    return [response.data.main.temp, response.data.weather[0].main];
 }
 
 exports.fetchRoutes = (_locations) => {
@@ -13,7 +15,6 @@ exports.fetchRoutes = (_locations) => {
             return reject(`Expected 2 or more locations, received ${locations.length}`);
         else if(locations.length == 2) {
             let response = await axios(`https://maps.googleapis.com/maps/api/directions/json?origin=${locations[0]}&destination=${locations[1]}&alternatives=true&key=${conf.api_key}`);
-            // resolve(response.data);
             let routePoints = [];
 
             for(const route of response.data.routes) {
@@ -31,14 +32,23 @@ exports.fetchRoutes = (_locations) => {
                 let newLocations = [];
 
                 for(let i = 0; i <= length; i = i + parts ) {
-                    newLocations.push({
-                        lat: turf.along(line, i, {units: 'kilometers'}).geometry.coordinates[0],
-                        lon: turf.along(line, i, {units: 'kilometers'}).geometry.coordinates[1],
-                    });
+                    let point = turf.along(line, i, {units: 'kilometers'}).geometry.coordinates;
+                    try {
+                        let weatherAtPoint = await fetchWeatherOnCoordinate(point);
+                        newLocations.push({
+                            lat: point[0],
+                            lon: point[1],
+                            weather: {
+                                temp: weatherAtPoint[0],
+                                type: weatherAtPoint[1]
+                            }
+                        });
+                    } catch(e) {
+                        return reject(e);
+                    }
                 }
 
                 routePoints.push(newLocations);
-                // console.log(newLocations);
             }
             resolve(routePoints);
         }
