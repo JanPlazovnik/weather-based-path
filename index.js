@@ -1,7 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const conf = require('./utils/conf.js');
 const funcs = require('./utils/funcs.js');
 const port = process.env.PORT || 8080;
 
@@ -15,9 +14,13 @@ const api = express.Router();
 app.use('/api/v1/locations', api);
 
 api.post('/path', (req, res) => {
-    let locations = (req.body.locations) ? req.body.locations : [req.body.origin, req.body.end];
-    console.log(locations);
-    res.sendStatus(200);
+    if(!req.body.locations)
+        return res.sendStatus(500);
+    const locations = req.body.locations; // always send location objects in an array, even if it's just the origin and end
+    funcs
+        .fetchRoutes(locations)
+        .then((response) => res.status(200).json(response))
+        .catch((err) => res.status(500).json(err));
 });
 
 // catch-all routes
