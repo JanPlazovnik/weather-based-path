@@ -67,11 +67,9 @@ exports.fetchRoutes = (_locations) => {
                 }
 
                 routePoints.push(newLocations);
-
-                // compare the weathers for optimal route
             }
-
-            resolve(routePoints);
+            let bestPath = findBestPath(routePoints);
+            resolve(bestPath);
         }
     });
 }
