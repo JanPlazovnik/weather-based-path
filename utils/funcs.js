@@ -8,6 +8,24 @@ const fetchWeatherOnCoordinate = async (coords) => {
     return [response.data.main.temp, response.data.weather[0].main];
 }
 
+const findBestPath = (arr) => {
+    let bestPath = [];
+    let bestTemp = 0;
+    let bestCoords = {};
+    for(const i in arr[0]) {
+        for(const j in arr) {
+            if(j == 0 || arr[j][i].weather.temp > bestTemp) {
+                bestTemp = arr[j][i].weather.temp;
+                bestCoords = arr[j][i];
+            }
+        }
+        bestPath.push(bestCoords);
+        bestTemp = 0;
+        bestCoords = {};
+    }
+    return bestPath;
+}
+
 exports.fetchRoutes = (_locations) => {
     return new Promise(async (resolve, reject) => {
         let locations = _locations;
@@ -49,7 +67,10 @@ exports.fetchRoutes = (_locations) => {
                 }
 
                 routePoints.push(newLocations);
+
+                // compare the weathers for optimal route
             }
+
             resolve(routePoints);
         }
     });
