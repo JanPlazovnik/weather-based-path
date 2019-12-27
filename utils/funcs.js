@@ -12,10 +12,11 @@ const findBestPath = (arr) => {
     let bestPath = [];
     let bestTemp = 0;
     let bestCoords = {};
+    let optimalTemp = 21; // might be a good optimal temperature for driving, not sure, easy change though
     for(const i in arr[0]) {
         for(const j in arr) {
-            if(j == 0 || arr[j][i].weather.temp > bestTemp) {
-                bestTemp = arr[j][i].weather.temp;
+            if(j == 0 || difference(optimalTemp, arr[j][i].weather.temp) < bestTemp) {
+                bestTemp = difference(optimalTemp, arr[j][i].weather.temp);
                 bestCoords = arr[j][i];
             }
         }
@@ -25,6 +26,8 @@ const findBestPath = (arr) => {
     }
     return bestPath;
 }
+
+const difference = (num1, num2) => (num1 > num2) ? num1 - num2 : num1 + num2;
 
 exports.fetchRoutes = (_locations) => {
     return new Promise(async (resolve, reject) => {
