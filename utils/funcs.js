@@ -29,50 +29,70 @@ const findBestPath = (arr) => {
 
 const difference = (num1, num2) => (num1 > num2) ? num1 - num2 : num1 + num2;
 
+const getLocations = async (locations) => {
+    let response = await axios(`https://maps.googleapis.com/maps/api/directions/json?origin=${locations[0]}&destination=${locations[1]}&alternatives=true&key=${conf.api_key}`);
+    let routePoints = [];
+
+    for(const route of response.data.routes) {
+        let coordinates = [];
+
+        for(const loc of route.legs[0].steps) {
+            coordinates.push([loc.end_location.lat, loc.end_location.lng]);
+        }
+
+        let line = turf.lineString(coordinates);
+        // let length = turf.length(line);
+        let length = route.legs[0].distance.value / 1000;
+        let parts = length / 5;
+
+        let newLocations = [];
+
+        for(let i = 0; i <= length; i = i + parts ) {
+            let point = turf.along(line, i, {units: 'kilometers'}).geometry.coordinates;
+            try {
+                let weatherAtPoint = await fetchWeatherOnCoordinate(point);
+                newLocations.push({
+                    lat: point[0],
+                    lon: point[1],
+                    weather: {
+                        temp: weatherAtPoint[0],
+                        type: weatherAtPoint[1]
+                    }
+                });
+            } catch(e) {
+                throw e;
+            }
+        }
+
+        routePoints.push(newLocations);
+    }
+    let bestPath = findBestPath(routePoints);
+    return bestPath;
+}
+
 exports.fetchRoutes = (_locations) => {
     return new Promise(async (resolve, reject) => {
         let locations = _locations;
         if(locations.length <= 1)
             return reject(`Expected 2 or more locations, received ${locations.length}`);
         else if(locations.length == 2) {
-            let response = await axios(`https://maps.googleapis.com/maps/api/directions/json?origin=${locations[0]}&destination=${locations[1]}&alternatives=true&key=${conf.api_key}`);
-            let routePoints = [];
-
-            for(const route of response.data.routes) {
-                let coordinates = [];
-
-                for(const loc of route.legs[0].steps) {
-                    coordinates.push([loc.end_location.lat, loc.end_location.lng]);
-                }
-
-                let line = turf.lineString(coordinates);
-                // let length = turf.length(line);
-                let length = route.legs[0].distance.value / 1000;
-                let parts = length / 5;
-
-                let newLocations = [];
-
-                for(let i = 0; i <= length; i = i + parts ) {
-                    let point = turf.along(line, i, {units: 'kilometers'}).geometry.coordinates;
-                    try {
-                        let weatherAtPoint = await fetchWeatherOnCoordinate(point);
-                        newLocations.push({
-                            lat: point[0],
-                            lon: point[1],
-                            weather: {
-                                temp: weatherAtPoint[0],
-                                type: weatherAtPoint[1]
-                            }
-                        });
-                    } catch(e) {
-                        return reject(e);
-                    }
-                }
-
-                routePoints.push(newLocations);
+            try {
+                resolve(getLocations(locations));
+            } catch(e) {
+                reject(e);
             }
-            let bestPath = findBestPath(routePoints);
-            resolve(bestPath);
+        }
+        else {
+            try {
+                let listOfAllLocations = [];
+                for(let i = 0, j = 1; i < locations.length - 1; i++, j++) {
+                    console.log([locations[i], locations[j]]);
+                    listOfAllLocations.push(...await getLocations([locations[i], locations[j]]));
+                }
+                resolve(listOfAllLocations);
+            } catch(e) {
+                reject(e);
+            }
         }
     });
 }
