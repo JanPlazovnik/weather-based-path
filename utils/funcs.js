@@ -15,7 +15,7 @@ const findBestPath = (arr) => {
     for(const i in arr[0]) {
         for(const j in arr) {
             if(typeof arr[j][i].weather === 'undefined') {console.log("breaking"); break;}
-            else if(j == 0 || difference(optimalTemp, arr[j][i].weather.temp) < bestTemp) {
+            if(j == 0 || difference(optimalTemp, arr[j][i].weather.temp) < bestTemp) {
                 bestTemp = difference(optimalTemp, arr[j][i].weather.temp);
                 bestCoords = arr[j][i];
             }
@@ -41,14 +41,13 @@ const getLocations = async (locations, start = true) => {
         }
 
         let line = turf.lineString(coordinates);
-        // let length = turf.length(line);
-        
-        let length = route.legs[0].distance.value / 1000;
+        let length = turf.length(line);       
+        // let length = route.legs[0].distance.value / 1000;
         let parts = length / 5;
         let newLocations = [];
 
         for(let i = 0; i <= length; i = i + parts ) {
-            // console.log(`Current length: ${i} of ${length}`);
+            // console.log(`${start} - Current length: ${i} of ${length}`);
             let point = turf.along(line, (start) ? i : i + parts , {units: 'kilometers'}).geometry.coordinates;
             try {
                 let weatherAtPoint = await fetchWeatherOnCoordinate(point);
@@ -64,6 +63,7 @@ const getLocations = async (locations, start = true) => {
                 throw e;
             }
         }
+        // console.log(newLocations);
         routePoints.push(newLocations);
     }
     let bestPath = findBestPath(routePoints);
@@ -86,10 +86,10 @@ exports.fetchRoutes = (_locations) => {
             try {
                 let listOfAllLocations = [];
                 for(let i = 0, j = 1; i < locations.length - 1; i++, j++) {
-                    if(i == 0)
+                    // if(i == 0)
                         listOfAllLocations.push(...await getLocations([locations[i], locations[j]]));
-                    else
-                        listOfAllLocations.push(...await getLocations([locations[i], locations[j]], false));
+                    // else
+                        // listOfAllLocations.push(...await getLocations([locations[i], locations[j]], false));
                 }
                 resolve(listOfAllLocations);
             } catch(e) {
